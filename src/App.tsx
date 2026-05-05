@@ -3,8 +3,9 @@ import type { FormEvent } from 'react'
 import { AuthenticatedApp } from './AuthenticatedApp'
 import './App.css'
 
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/+$/, '')
-const LOGIN_ENDPOINT = API_BASE_URL ? `${API_BASE_URL}/api/v1/auth/login` : '/api/v1/auth/login'
+const API_PATH_PREFIX = '/api/v1'
+const API_BASE_URL = (import.meta.env.DEV ? '' : import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/+$/, '')
+const LOGIN_ENDPOINT = API_BASE_URL ? `${API_BASE_URL}${API_PATH_PREFIX}/auth/login` : `${API_PATH_PREFIX}/auth/login`
 const TOKEN_STORAGE_KEY = 'authToken'
 const EMAIL_STORAGE_KEY = 'authUserEmail'
 const DEMO_TOKEN = 'demo-auth-token'
@@ -18,6 +19,28 @@ type LoginStatus = {
 type Session = {
   email: string
   token: string
+}
+
+function getRequestErrorMessage(error: unknown): string {
+  if (!(error instanceof Error)) {
+    return 'No se pudo conectar con el servidor de autenticacion.'
+  }
+
+  const message = error.message.trim()
+
+  if (!message) {
+    return 'No se pudo conectar con el servidor de autenticacion.'
+  }
+
+  if (message === 'Bad Gateway') {
+    return 'La API configurada no responde correctamente.'
+  }
+
+  if (message === 'Failed to fetch') {
+    return 'No se pudo alcanzar el servidor de autenticacion.'
+  }
+
+  return message
 }
 
 function getInitialSession(): Session | null {
@@ -228,7 +251,12 @@ function App() {
       const payload: unknown = isJson ? await response.json() : await response.text()
 
       if (!response.ok) {
-        throw new Error(getApiErrorMessage(payload) ?? 'No se pudo iniciar sesion.')
+        throw new Error(
+          getApiErrorMessage(payload)
+            ?? (response.status === 502
+              ? 'La API configurada no responde correctamente.'
+              : 'No se pudo iniciar sesion.'),
+        )
       }
 
       const token = findToken(payload)
@@ -250,10 +278,7 @@ function App() {
       setSession(null)
       setLoginStatus({
         type: 'error',
-        message:
-          error instanceof Error
-            ? error.message
-            : 'No se pudo conectar con el servidor de autenticacion.',
+        message: getRequestErrorMessage(error),
       })
     } finally {
       setIsSubmitting(false)
@@ -276,6 +301,12 @@ function App() {
     <main className="login-shell">
       <section className="login-card" aria-labelledby="login-title">
         <form className="form-panel" onSubmit={handleSubmit}>
+          {DEMO_MODE_ENABLED && (
+            <p className="demo-banner" role="status">
+              Modo demo activo. El acceso local no requiere backend.
+            </p>
+          )}
+
           <div className="heading">
             <img className="heading-logo" src="/cyclix-logo-transparent.png" alt="Cyclix" />
             <h1 id="login-title">Iniciar Sesi&oacute;n</h1>
