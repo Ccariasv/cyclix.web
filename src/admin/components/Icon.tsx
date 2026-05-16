@@ -86,13 +86,6 @@ export function Icon({ name, className }: { name: IconName; className?: string }
           <path d="M15 12H4" />
         </svg>
       )
-    case 'pin':
-      return (
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-          <path d="M12 20s6-5.6 6-10.2A6 6 0 0 0 6 9.8C6 14.4 12 20 12 20Z" />
-          <circle cx="12" cy="9.5" r="2.2" />
-        </svg>
-      )
     case 'chevron-left':
       return (
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>

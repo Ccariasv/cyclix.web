@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { MapContainer, Marker, Popup, TileLayer, useMap, useMapEvents } from 'react-leaflet'
+import { MapContainer, Marker, Polygon, Popup, TileLayer, useMap, useMapEvents } from 'react-leaflet'
 import { divIcon, latLngBounds } from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import bikeMapIcon from '../../assets/bike-map-icon.png'
@@ -21,11 +21,13 @@ function createStationIcon(active: boolean) {
   })
 }
 
-function createBikeIcon(tone: MarkerTone, active: boolean) {
+function createBikeIcon(tone: MarkerTone, active: boolean, alert: boolean) {
   return divIcon({
     className: 'leaflet-div-marker-reset',
     html: `
-      <div class="map-marker map-marker--bike map-marker--${tone}${active ? ' map-marker--active' : ''}">
+      <div class="map-marker map-marker--bike map-marker--${tone}${active ? ' map-marker--active' : ''}${
+        alert ? ' map-marker--alert' : ''
+      }">
         <img src="${bikeMapIcon}" alt="" class="map-marker__bike-icon" />
       </div>
     `,
@@ -109,11 +111,14 @@ type FleetMapProps = {
   bikes: Bike[]
   visibleBikeIds: string[]
   draftStationPoint: LatLngPoint | null
+  boundaryPoints?: LatLngPoint[]
+  alertBikeIds?: string[]
   selectedStationId: string | null
   selectedBikeId: string | null
   placementTarget: PlacementTarget
   onSelectStation: (stationId: string) => void
   onSelectBike: (bikeId: string) => void
+  onMoveBike?: (bikeId: string, lat: number, lng: number) => void
   onPlace: (lat: number, lng: number) => void
 }
 
@@ -122,16 +127,23 @@ export function FleetMap({
   bikes,
   visibleBikeIds,
   draftStationPoint,
+  boundaryPoints = [],
+  alertBikeIds = [],
   selectedStationId,
   selectedBikeId,
   placementTarget,
   onSelectStation,
   onSelectBike,
+  onMoveBike,
   onPlace,
 }: FleetMapProps) {
   const visibleBikeIdSet = new Set(visibleBikeIds)
-  const visibleBikes = bikes.filter((bike) => visibleBikeIdSet.has(bike.id) && bike.stationId === null)
+  const alertBikeIdSet = new Set(alertBikeIds)
+  const visibleBikes = bikes.filter(
+    (bike) => visibleBikeIdSet.has(bike.id) && (bike.stationId === null || bike.status === 'in_use'),
+  )
   const points: LatLngPoint[] = [
+    ...boundaryPoints,
     ...stations.map((station) => [station.lat, station.lng] as LatLngPoint),
     ...visibleBikes.map((bike) => [bike.lat, bike.lng] as LatLngPoint),
   ]
@@ -147,8 +159,22 @@ export function FleetMap({
         <MapViewportSync points={points} />
         <MapClickHandler placementTarget={placementTarget} onPlace={onPlace} />
 
+        {boundaryPoints.length >= 3 ? (
+          <Polygon
+            positions={boundaryPoints}
+            pathOptions={{
+              color: '#e74d5b',
+              weight: 3,
+              opacity: 0.95,
+              fillColor: '#e74d5b',
+              fillOpacity: 0.08,
+              dashArray: '10 8',
+            }}
+          />
+        ) : null}
+
         {stations.map((station) => {
-          const parkedBikes = bikes.filter((bike) => bike.stationId === station.id)
+          const parkedBikes = bikes.filter((bike) => bike.stationId === station.id && bike.status !== 'in_use')
 
           return (
             <Marker
@@ -207,14 +233,24 @@ export function FleetMap({
             <Marker
               key={bike.id}
               position={position}
-              icon={createBikeIcon(getBikeTone(bike.status), selectedBikeId === bike.id)}
+              icon={createBikeIcon(getBikeTone(bike.status), selectedBikeId === bike.id, alertBikeIdSet.has(bike.id))}
+              draggable={bike.status === 'in_use'}
               eventHandlers={{
                 click: () => onSelectBike(bike.id),
+                dragend: (event) => {
+                  if (!onMoveBike || bike.status !== 'in_use') {
+                    return
+                  }
+
+                  const { lat, lng } = event.target.getLatLng()
+                  onMoveBike(bike.id, lat, lng)
+                },
               }}
             >
               <Popup>
                 <strong>{getBikeLabel(bike)}</strong>
                 <div>Estado: {getBikeStatusLabel(bike.status)}</div>
+                {alertBikeIdSet.has(bike.id) ? <div>Alerta: fuera del perimetro de Zacapa</div> : null}
                 <div>Bateria: {bike.battery}%</div>
                 <div>
                   Estacion: {station ? station.name : 'Sin estacion'}
@@ -222,6 +258,7 @@ export function FleetMap({
                 <div>
                   Coordenadas base: {bike.lat.toFixed(5)}, {bike.lng.toFixed(5)}
                 </div>
+                {bike.status === 'in_use' ? <div>Arrastra el icono para mover la bicicleta.</div> : null}
               </Popup>
             </Marker>
           )

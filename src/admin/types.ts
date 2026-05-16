@@ -1,9 +1,24 @@
 import type { ReactNode } from 'react'
 
-export type AdminSection = 'dashboard' | 'registry' | 'fleet' | 'maintenance' | 'analytics' | 'zones' | 'support'
-export type BikeStatus = 'available' | 'in_use' | 'maintenance' | 'low_battery'
+export type AdminSection = 'dashboard' | 'registry' | 'fleet' | 'maintenance' | 'analytics' | 'support'
+export type StationStatus = 'active' | 'inactive' | 'maintenance'
+export type BikeType = 'Urbana' | 'Montana' | 'Electrica'
+export type BikeStatus =
+  | 'available'
+  | 'in_use'
+  | 'maintenance'
+  | 'out_of_service'
+  | 'reserved'
 export type MaintenanceStatus = 'open' | 'in_progress' | 'resolved'
-export type SupportStatus = 'open' | 'in_review' | 'resolved'
+export type SupportStatus = 'open' | 'in_progress' | 'resolved'
+export type SupportImportance = 'low' | 'medium' | 'high'
+export type SupportTicketType =
+  | 'bike_issue'
+  | 'station_issue'
+  | 'payment_issue'
+  | 'account_access'
+  | 'safety_report'
+  | 'other'
 export type MarkerTone = 'green' | 'blue' | 'orange' | 'red'
 
 export type IconName =
@@ -17,7 +32,6 @@ export type IconName =
   | 'ticket'
   | 'clock'
   | 'logout'
-  | 'pin'
   | 'chevron-left'
   | 'chevron-right'
 
@@ -29,6 +43,7 @@ export type NavItem<T extends string> = {
 }
 
 export type AuthenticatedAppProps = {
+  authToken: string
   userEmail: string
   onLogout: () => void
 }
@@ -40,6 +55,7 @@ export type Station = {
   capacity: number
   lat: number
   lng: number
+  status: StationStatus
   isActive: boolean
   createdAt: string
   updatedAt: string
@@ -51,7 +67,7 @@ export type Bike = {
   serialNumber: string
   color: string
   size: string
-  bikeType: string
+  bikeType: BikeType
   battery: number
   status: BikeStatus
   stationId: string | null
@@ -66,6 +82,7 @@ export type Bike = {
 export type MaintenanceItem = {
   id: string
   bikeId: string
+  supportTicketId?: string
   title: string
   technician: string
   notes: string
@@ -80,7 +97,11 @@ export type SupportTicket = {
   requester: string
   channel: string
   notes: string
+  bikeId?: string
+  bikeCode?: string
+  type: SupportTicketType
   status: SupportStatus
+  importance: SupportImportance
   createdAt: string
   updatedAt: string
 }
@@ -90,6 +111,18 @@ export type AdminData = {
   bikes: Bike[]
   maintenance: MaintenanceItem[]
   support: SupportTicket[]
+}
+
+export type SupportSyncState = {
+  isLoading: boolean
+  error: string | null
+  lastUpdated: string | null
+}
+
+export type SupportUpdateHandlers = {
+  onRefreshSupport: () => Promise<void>
+  onUpdateSupportStatus: (ticketId: string, status: SupportStatus) => Promise<void>
+  onUpdateSupportPriority: (ticketId: string, priority: SupportImportance) => Promise<void>
 }
 
 export type ActivityItem = {
