@@ -1,0 +1,39 @@
+services:
+  mariadb:
+    image: mariadb:latest
+    container_name: cyclix-mariadb
+    restart: unless-stopped
+    environment:
+      MARIADB_DATABASE: DB_cyclix
+      MARIADB_USER: cyclix_admin
+      MARIADB_PASSWORD: cyclix10
+      MARIADB_ROOT_PASSWORD: cyclix1000
+    ports:
+      - "3306:3306"
+    volumes:
+      - mariadb_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    profiles: ["full"]
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: cyclix-api
+    restart: unless-stopped
+    depends_on:
+      mariadb:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mariadb://mariadb:3306/DB_cyclix
+      SPRING_DATASOURCE_USERNAME: cyclix_admin
+      SPRING_DATASOURCE_PASSWORD: cyclix10
+    ports:
+      - "6060:6060"
+
+volumes:
+  mariadb_data:

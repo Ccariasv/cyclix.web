@@ -1,0 +1,624 @@
+.cx-floating-lock {
+  overflow: hidden;
+}
+
+body {
+  color: rgb(15, 23, 42);
+}
+
+.content-scroll {
+  padding-bottom: 32px;
+}
+
+.summary-grid,
+.stats-grid,
+.content-grid,
+.stack-grid,
+.stack-grid--split {
+  gap: 20px;
+}
+
+.card,
+.panel,
+.detail-card,
+.summary-card,
+.analytics-panel,
+.activity-panel,
+.stat-card,
+.login-card {
+  border-radius: 20px;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.06);
+}
+
+.page-header h1 {
+  color: rgb(15, 23, 42);
+}
+
+.button-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.primary-button,
+.secondary-button,
+.logout-button,
+.submit-button,
+.registry-table-switch__button,
+.sidebar-toggle,
+.analytics-filter-chip {
+  min-height: 42px;
+  border-radius: 12px;
+  transition:
+    transform 140ms ease,
+    box-shadow 140ms ease,
+    background-color 140ms ease,
+    border-color 140ms ease;
+}
+
+.primary-button:hover,
+.secondary-button:hover,
+.logout-button:hover,
+.submit-button:hover,
+.registry-table-switch__button:hover,
+.sidebar-toggle:hover,
+.analytics-filter-chip:hover {
+  transform: translateY(-1px);
+}
+
+.control input,
+.control select,
+.control textarea,
+.field input,
+.input-wrap input {
+  min-height: 46px;
+  border-radius: 14px;
+  border: 1px solid rgba(191, 219, 254, 0.95);
+  box-sizing: border-box;
+}
+
+.control textarea {
+  min-height: 120px;
+  padding: 14px 16px;
+}
+
+.data-table th,
+.data-table td {
+  vertical-align: middle;
+}
+
+.record-card,
+.fleet-note-card,
+.analytics-ranking-item,
+.analytics-report-item,
+.activity-row,
+.peak-list__item {
+  border-radius: 16px;
+}
+
+.cx-collapsible-body[hidden] {
+  display: none !important;
+}
+
+.cx-floating-filter-panel {
+  position: relative;
+  overflow: visible;
+}
+
+.cx-floating-filter-panel .card-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.cx-floating-filter-panel .card-head h2 {
+  margin-right: auto;
+}
+
+.cx-floating-filter-panel .card-head .tag {
+  flex: 0 0 auto;
+}
+
+.cx-floating-filter-panel--open {
+  z-index: 30;
+}
+
+.cx-floating-backdrop {
+  position: fixed;
+  inset: 0;
+  border: 0;
+  padding: 0;
+  background: rgba(248, 250, 252, 0.68);
+  backdrop-filter: blur(3px);
+  z-index: 9998;
+  cursor: default;
+}
+
+.cx-floating-filter-panel > .cx-collapsible-body {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(1040px, calc(100vw - 88px));
+  max-width: calc(100vw - 88px);
+  max-height: calc(100vh - 72px);
+  overflow: auto;
+  padding: 28px 28px 32px;
+  border: 1px solid rgba(191, 219, 254, 0.8);
+  border-radius: 24px;
+  background: #ffffff;
+  box-shadow: 0 32px 88px rgba(15, 23, 42, 0.18);
+  z-index: 9999;
+}
+
+.cx-floating-filter-panel > .cx-collapsible-body > * + * {
+  margin-top: 20px;
+}
+
+.cx-floating-window-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.16);
+}
+
+.cx-floating-window-title {
+  font-size: 2rem;
+  line-height: 1.1;
+  color: rgb(15, 23, 42);
+}
+
+.cx-filter-toggle,
+.cx-floating-window-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 14px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  white-space: nowrap;
+  box-sizing: border-box;
+  color: #2a7bda;
+  background: #edf4fb;
+  box-shadow: none;
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.18s ease,
+    filter 0.18s ease,
+    background-color 0.18s ease,
+    color 0.18s ease;
+}
+
+.cx-filter-toggle,
+.cx-floating-window-close {
+  min-width: 116px;
+  flex: 0 0 auto;
+}
+
+.cx-floating-window-close {
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
+  padding: 0;
+  min-height: 44px;
+  border-radius: 14px;
+  font-size: 1.75rem;
+  line-height: 1;
+}
+
+.cx-filter-toggle:hover,
+.cx-floating-window-close:hover {
+  transform: translateY(-1px);
+}
+
+.cx-filter-toggle--active {
+  color: #ffffff;
+  background: linear-gradient(135deg, #2a7bda 0%, #47a2ff 100%);
+  box-shadow: 0 10px 18px rgba(42, 123, 218, 0.18);
+}
+
+.cx-floating-filter-panel .card-head {
+  position: relative;
+}
+
+.cx-support-filters,
+.cx-users-filter-wrap,
+.cx-analytics-datasets {
+  margin-top: 0;
+}
+
+.cx-collapsible-body .analytics-filter-bar,
+.cx-collapsible-body .cx-support-filters,
+.cx-collapsible-body .form-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 18px;
+}
+
+.cx-collapsible-body .analytics-filter-bar > *,
+.cx-collapsible-body .form-grid > *,
+.cx-collapsible-body .cx-support-filters > * {
+  min-width: 0;
+}
+
+.cx-collapsible-body .control > span,
+.cx-collapsible-body .cx-analytics-datasets__label {
+  display: block;
+  margin-bottom: 10px;
+  color: rgba(51, 65, 85, 0.86);
+  font-size: 0.98rem;
+  font-weight: 700;
+}
+
+.cx-collapsible-body .control input,
+.cx-collapsible-body .control select {
+  width: 100%;
+  min-height: 56px;
+  padding: 0 16px;
+  border: 1px solid rgba(191, 219, 254, 0.95);
+  border-radius: 16px;
+  background: #ffffff;
+  box-sizing: border-box;
+}
+
+.cx-collapsible-body .analytics-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.cx-collapsible-body .analytics-filter-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  min-width: 148px;
+  padding: 0 18px;
+  border-radius: 999px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  white-space: nowrap;
+  box-sizing: border-box;
+  width: auto;
+}
+
+.cx-support-filters .control,
+.cx-users-filter-wrap .control {
+  min-width: 0;
+}
+
+.cx-analytics-datasets__label {
+  margin-bottom: 14px;
+}
+
+.cx-analytics-datasets__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.cx-empty-note {
+  margin-top: 16px;
+}
+
+.cx-registry-forms-host {
+  height: 0;
+  min-height: 0 !important;
+  margin: 0 !important;
+  overflow: visible;
+}
+
+.cx-registry-forms-host > .cx-registry-backdrop {
+  position: fixed;
+  inset: 0;
+  border: 0;
+  padding: 0;
+  background: rgba(248, 250, 252, 0.68);
+  backdrop-filter: blur(3px);
+  z-index: 9998;
+}
+
+.cx-registry-map-modal {
+  z-index: 10020;
+}
+
+.cx-registry-map-modal .registry-location-modal__backdrop {
+  background: rgba(248, 250, 252, 0.68);
+  z-index: 0;
+}
+
+.cx-registry-map-modal .registry-location-modal__panel {
+  width: min(1180px, calc(100vw - 40px));
+  max-height: calc(100vh - 40px);
+  box-shadow: 0 32px 88px rgba(15, 23, 42, 0.18);
+}
+
+.cx-registry-map-modal .registry-location-modal__header h2 {
+  letter-spacing: -0.04em;
+}
+
+.cx-registry-map-modal__close {
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
+  padding: 0;
+  font-size: 1.75rem;
+  line-height: 1;
+}
+
+.cx-registry-map-summary {
+  margin-top: 0;
+}
+
+.cx-registry-map-summary p {
+  overflow-wrap: anywhere;
+}
+
+.cx-registry-map-actions {
+  justify-content: flex-end;
+}
+
+.cx-registry-map-actions .primary-button,
+.cx-registry-map-actions .secondary-button,
+.cx-registry-map-trigger {
+  min-width: 156px;
+}
+
+.cx-registry-map-trigger {
+  margin-right: auto;
+}
+
+.cx-registry-map-modal .fleet-map,
+.cx-registry-map-modal .fleet-map__leaflet {
+  min-height: 520px;
+}
+
+.cx-registry-floating-card {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  width: min(1040px, calc(100vw - 88px));
+  max-width: calc(100vw - 88px);
+  max-height: calc(100vh - 72px);
+  padding: 28px 28px 32px;
+  overflow: auto;
+  border-radius: 24px;
+  border: 1px solid rgba(191, 219, 254, 0.8);
+  background: #ffffff;
+  box-shadow: 0 32px 88px rgba(15, 23, 42, 0.18);
+  transform: translate(-50%, -50%);
+  z-index: 9999;
+}
+
+.cx-registry-floating-card--station {
+  width: min(1180px, calc(100vw - 88px));
+}
+
+.cx-registry-floating-card[hidden] {
+  display: none !important;
+}
+
+.cx-registry-floating-card .card-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 22px;
+}
+
+.cx-registry-floating-card .card-head h2 {
+  margin: 0;
+  font-size: 2rem;
+  line-height: 1.1;
+  color: rgb(15, 23, 42);
+}
+
+.cx-registry-floating-card .card-head .tag {
+  margin-left: auto;
+}
+
+.cx-registry-window-close {
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
+  margin-left: 0;
+  padding: 0;
+  border-radius: 14px;
+  font-size: 1.75rem;
+  line-height: 1;
+}
+
+.cx-registry-floating-card .form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.cx-registry-floating-card .form-grid .control {
+  min-width: 0;
+}
+
+.cx-registry-floating-card .form-grid input,
+.cx-registry-floating-card .form-grid select {
+  width: 100%;
+  min-height: 56px;
+  padding: 0 16px;
+}
+
+.cx-registry-floating-card .button-row {
+  justify-content: flex-end;
+  margin-top: 22px;
+}
+
+.cx-registry-floating-card .button-row .primary-button,
+.cx-registry-floating-card .button-row .secondary-button {
+  min-width: 148px;
+}
+
+.cx-registry-station-map-panel {
+  margin-top: 22px;
+}
+
+.cx-registry-station-map-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(280px, 0.8fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.cx-registry-station-map-shell,
+.cx-registry-station-map-canvas {
+  min-height: 420px;
+}
+
+.cx-registry-station-map-shell {
+  overscroll-behavior: contain;
+}
+
+.cx-registry-station-map-canvas,
+.cx-registry-station-map-canvas .leaflet-container {
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+}
+
+.cx-registry-station-map-canvas .leaflet-container {
+  cursor: grab;
+}
+
+.cx-registry-station-map-canvas .leaflet-container:active {
+  cursor: grabbing;
+}
+
+.cx-registry-station-map-summary {
+  min-width: 0;
+}
+
+.cx-registry-map-toolbar {
+  display: flex;
+  justify-content: flex-start;
+  margin-bottom: 14px;
+}
+
+.cx-map-mode-button {
+  min-width: 152px;
+}
+
+.cx-map-mode-button--active {
+  color: #ffffff;
+  background: linear-gradient(135deg, #297cd8 0%, #47a2ff 100%);
+  border-color: transparent;
+  box-shadow: 0 10px 22px rgba(41, 124, 216, 0.24);
+}
+
+.cx-registry-station-map-summary .fleet-detail-list {
+  margin-top: 16px;
+}
+
+.cx-registry-station-map-summary .fleet-detail-list__row strong,
+.cx-registry-station-map-summary .fleet-note-card p {
+  overflow-wrap: anywhere;
+}
+
+.registry-header__actions,
+.button-row,
+.analytics-filter-bar,
+.cx-analytics-datasets__chips {
+  align-items: center;
+}
+
+@media (max-width: 720px) {
+  .cx-floating-filter-panel > .cx-collapsible-body {
+    width: calc(100vw - 20px);
+    max-width: calc(100vw - 20px);
+    max-height: calc(100vh - 20px);
+    padding: 20px 18px 24px;
+    border-radius: 20px;
+  }
+
+  .cx-floating-window-title {
+    font-size: 1.5rem;
+  }
+
+  .cx-floating-window-close {
+    width: 44px;
+    min-width: 44px;
+    height: 44px;
+    font-size: 1.6rem;
+  }
+
+  .cx-registry-floating-card {
+    width: calc(100vw - 20px);
+    max-width: calc(100vw - 20px);
+    max-height: calc(100vh - 20px);
+    padding: 20px 18px 24px;
+    border-radius: 20px;
+  }
+
+  .cx-registry-floating-card .card-head {
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .cx-registry-floating-card .card-head h2 {
+    font-size: 1.5rem;
+  }
+
+  .cx-registry-floating-card .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .cx-registry-station-map-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .cx-registry-map-toolbar {
+    flex-direction: column;
+  }
+
+  .cx-map-mode-button {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .cx-registry-station-map-shell,
+  .cx-registry-station-map-canvas {
+    min-height: 320px;
+  }
+
+  .cx-registry-window-close {
+    width: 44px;
+    min-width: 44px;
+    height: 44px;
+    font-size: 1.6rem;
+  }
+
+  .cx-registry-map-modal .registry-location-modal__panel {
+    width: calc(100vw - 20px);
+    max-height: calc(100vh - 20px);
+    padding: 18px;
+    border-radius: 22px;
+  }
+
+  .cx-registry-map-modal .fleet-map,
+  .cx-registry-map-modal .fleet-map__leaflet {
+    min-height: 400px;
+  }
+
+  .cx-registry-map-actions .primary-button,
+  .cx-registry-map-actions .secondary-button,
+  .cx-registry-map-trigger {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .cx-registry-map-trigger {
+    margin-right: 0;
+  }
+}

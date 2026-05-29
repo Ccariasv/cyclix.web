@@ -343,13 +343,6 @@ export function AuthenticatedApp({ authToken, userEmail, onLogout }: Authenticat
           </nav>
         </div>
 
-        <div className="system-card" title={isSidebarCollapsed ? 'Datos locales activos' : undefined}>
-          <strong className="system-card__title">Datos locales activos</strong>
-          <p className="system-card__copy">
-            <span className="system-card__dot"></span>
-            <span className="system-card__text">Los cambios se guardan en este navegador</span>
-          </p>
-        </div>
       </aside>
 
       <div className="main-shell">

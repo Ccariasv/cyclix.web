@@ -239,10 +239,6 @@ export function FleetSection({
                         <strong>{selectedStation.name}</strong>
                       </div>
                       <div className="fleet-detail-list__row">
-                        <span>Zona</span>
-                        <strong>{selectedStation.zone}</strong>
-                      </div>
-                      <div className="fleet-detail-list__row">
                         <span>Capacidad</span>
                         <strong>{selectedStation.capacity} espacios</strong>
                       </div>

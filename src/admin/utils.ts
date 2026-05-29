@@ -674,36 +674,6 @@ export function getStationOccupancy(stationId: string, bikes: Bike[]) {
   return bikes.filter((bike) => bike.stationId === stationId).length
 }
 
-export function getZoneSummaries(data: AdminData) {
-  const zoneMap = new Map<
-    string,
-    { zone: string; stations: number; bikes: number; capacity: number; occupancy: number }
-  >()
-
-  const activeStations = data.stations.filter((station) => station.isActive)
-  const activeBikes = data.bikes.filter((bike) => bike.isActive)
-
-  activeStations.forEach((station) => {
-    const current = zoneMap.get(station.zone) ?? {
-      zone: station.zone,
-      stations: 0,
-      bikes: 0,
-      capacity: 0,
-      occupancy: 0,
-    }
-
-    const parkedBikes = getStationOccupancy(station.id, activeBikes)
-    current.stations += 1
-    current.bikes += parkedBikes
-    current.capacity += station.capacity
-    current.occupancy = current.capacity === 0 ? 0 : Math.round((current.bikes / current.capacity) * 100)
-
-    zoneMap.set(station.zone, current)
-  })
-
-  return Array.from(zoneMap.values()).sort((left, right) => left.zone.localeCompare(right.zone))
-}
-
 export function buildActivityItems(data: AdminData): ActivityItem[] {
   const bikeActivity: ActivityItem[] = data.bikes.map((bike) => {
     const bikeTone = getBikeTone(bike.status)
