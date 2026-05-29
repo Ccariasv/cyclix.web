@@ -1,11 +1,9 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { AuthenticatedApp } from './AuthenticatedApp'
+import { LOGIN_ENDPOINT } from './api'
 import './App.css'
 
-const API_PATH_PREFIX = '/api/v1'
-const API_BASE_URL = (import.meta.env.DEV ? '' : import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/+$/, '')
-const LOGIN_ENDPOINT = API_BASE_URL ? `${API_BASE_URL}${API_PATH_PREFIX}/auth/login` : `${API_PATH_PREFIX}/auth/login`
 const TOKEN_STORAGE_KEY = 'authToken'
 const EMAIL_STORAGE_KEY = 'authUserEmail'
 const DEMO_TOKEN = 'demo-auth-token'
@@ -63,9 +61,23 @@ function clearSessionStorage() {
   window.localStorage.removeItem(EMAIL_STORAGE_KEY)
 }
 
+function looksLikeAccessToken(value: string) {
+  const trimmed = value.trim()
+
+  if (!trimmed || /\s/.test(trimmed)) {
+    return false
+  }
+
+  if (/^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+$/.test(trimmed)) {
+    return true
+  }
+
+  return trimmed.length >= 24
+}
+
 function findToken(payload: unknown): string | null {
   if (typeof payload === 'string') {
-    return payload.trim() || null
+    return looksLikeAccessToken(payload) ? payload.trim() : null
   }
 
   if (!payload || typeof payload !== 'object') {
@@ -84,6 +96,10 @@ function findToken(payload: unknown): string | null {
   }
 
   for (const value of Object.values(response)) {
+    if (!value || typeof value !== 'object') {
+      continue
+    }
+
     const token = findToken(value)
 
     if (token) {
@@ -294,7 +310,7 @@ function App() {
   }
 
   if (session) {
-    return <AuthenticatedApp userEmail={session.email} onLogout={handleLogout} />
+    return <AuthenticatedApp authToken={session.token} userEmail={session.email} onLogout={handleLogout} />
   }
 
   return (

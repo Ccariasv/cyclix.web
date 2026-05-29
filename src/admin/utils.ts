@@ -6,19 +6,182 @@ import {
   adminNav,
   bikeStatusOptions,
   maintenanceStatusOptions,
+  stationStatusOptions,
+  supportImportanceOptions,
   supportStatusOptions,
+  supportTypeOptions,
 } from './constants'
 import type {
   ActivityItem,
   AdminData,
   AdminSection,
   Bike,
-  Station,
   BikeStatus,
+  BikeType,
+  MaintenanceItem,
   MaintenanceStatus,
   MarkerTone,
+  Station,
+  StationStatus,
+  SupportImportance,
   SupportStatus,
+  SupportTicket,
+  SupportTicketType,
 } from './types'
+
+function readNestedValue(source: Record<string, unknown>, path: string): unknown {
+  return path.split('.').reduce<unknown>((current, segment) => {
+    if (!current || typeof current !== 'object') {
+      return undefined
+    }
+
+    return (current as Record<string, unknown>)[segment]
+  }, source)
+}
+
+function getFirstString(source: Record<string, unknown>, paths: string[]) {
+  for (const path of paths) {
+    const value = readNestedValue(source, path)
+
+    if (typeof value === 'string' && value.trim()) {
+      return value.trim()
+    }
+
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      return String(value)
+    }
+  }
+
+  return ''
+}
+
+function normalizeSupportTypeValue(value: unknown): SupportTicketType {
+  if (typeof value !== 'string') {
+    return 'other'
+  }
+
+  const normalized = value.trim().toLowerCase().replace(/[\s-]+/g, '_')
+
+  if (
+    normalized === 'bike_issue' ||
+    normalized === 'station_issue' ||
+    normalized === 'payment_issue' ||
+    normalized === 'account_access' ||
+    normalized === 'safety_report' ||
+    normalized === 'other'
+  ) {
+    return normalized
+  }
+
+  if (normalized.includes('bike') || normalized.includes('bicycle') || normalized.includes('cycle')) {
+    return 'bike_issue'
+  }
+
+  if (normalized.includes('station') || normalized.includes('dock') || normalized.includes('anchor')) {
+    return 'station_issue'
+  }
+
+  if (
+    normalized.includes('payment') ||
+    normalized.includes('pay') ||
+    normalized.includes('charge') ||
+    normalized.includes('billing') ||
+    normalized.includes('refund')
+  ) {
+    return 'payment_issue'
+  }
+
+  if (
+    normalized.includes('account') ||
+    normalized.includes('access') ||
+    normalized.includes('login') ||
+    normalized.includes('password') ||
+    normalized.includes('session')
+  ) {
+    return 'account_access'
+  }
+
+  if (
+    normalized.includes('safety') ||
+    normalized.includes('security') ||
+    normalized.includes('incident') ||
+    normalized.includes('accident') ||
+    normalized.includes('theft')
+  ) {
+    return 'safety_report'
+  }
+
+  return 'other'
+}
+
+function normalizeSupportStatusValue(value: unknown): SupportStatus {
+  if (typeof value !== 'string') {
+    return 'open'
+  }
+
+  const normalized = value.trim().toLowerCase().replace(/[\s-]+/g, '_')
+
+  if (normalized === 'resolved' || normalized === 'closed' || normalized === 'done' || normalized === 'solved') {
+    return 'resolved'
+  }
+
+  if (
+    normalized === 'in_progress' ||
+    normalized === 'progress' ||
+    normalized === 'review' ||
+    normalized === 'in_review' ||
+    normalized === 'under_review' ||
+    normalized === 'processing'
+  ) {
+    return 'in_progress'
+  }
+
+  return 'open'
+}
+
+function normalizeSupportImportanceValue(value: unknown): SupportImportance {
+  if (typeof value !== 'string') {
+    return 'medium'
+  }
+
+  const normalized = value.trim().toLowerCase().replace(/[\s-]+/g, '_')
+
+  if (
+    normalized === 'high' ||
+    normalized === 'important' ||
+    normalized === 'critical' ||
+    normalized === 'urgent' ||
+    normalized === 'severe'
+  ) {
+    return 'high'
+  }
+
+  if (normalized === 'low' || normalized === 'minor') {
+    return 'low'
+  }
+
+  return 'medium'
+}
+
+function normalizeDateValue(value: unknown, fallback: string) {
+  if (typeof value === 'string' && value.trim()) {
+    const parsed = new Date(value)
+
+    if (!Number.isNaN(parsed.getTime())) {
+      return parsed.toISOString()
+    }
+  }
+
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    const parsed = new Date(value)
+
+    if (!Number.isNaN(parsed.getTime())) {
+      return parsed.toISOString()
+    }
+  }
+
+  return fallback
+}
 
 export function createEmptyAdminData(): AdminData {
   return {
@@ -89,6 +252,51 @@ export function reserveNextBikeSerial(bikes: Bike[]) {
   return formatBikeSerial(nextSequence)
 }
 
+function normalizeBikeStatus(value: unknown): BikeStatus {
+  if (value === 'available' || value === 'DISPONIBLE') {
+    return 'available'
+  }
+  if (value === 'in_use' || value === 'EN_USO') {
+    return 'in_use'
+  }
+  if (value === 'maintenance' || value === 'MANTENIMIENTO') {
+    return 'maintenance'
+  }
+  if (value === 'reserved' || value === 'RESERVADA') {
+    return 'reserved'
+  }
+  if (value === 'out_of_service' || value === 'FUERA_DE_SERVICIO' || value === 'low_battery' || value === 'LOW_BATTERY') {
+    return 'out_of_service'
+  }
+
+  return 'available'
+}
+
+function normalizeBikeType(value: unknown): BikeType {
+  if (value === 'Montana' || value === 'MONTAÑA' || value === 'MONTANA') {
+    return 'Montana'
+  }
+  if (value === 'Electrica' || value === 'ELECTRICA') {
+    return 'Electrica'
+  }
+
+  return 'Urbana'
+}
+
+function normalizeStationStatus(value: unknown, fallbackActive = true): StationStatus {
+  if (value === 'active' || value === 'ACTIVO') {
+    return 'active'
+  }
+  if (value === 'inactive' || value === 'INACTIVO') {
+    return 'inactive'
+  }
+  if (value === 'maintenance' || value === 'MANTENIMIENTO') {
+    return 'maintenance'
+  }
+
+  return fallbackActive ? 'active' : 'inactive'
+}
+
 export function normalizeBikes(rawBikes: unknown[]) {
   const usedSerials = new Set<string>()
   let nextFallbackSequence = getHighestBikeSerialSequence(
@@ -124,15 +332,13 @@ export function normalizeBikes(rawBikes: unknown[]) {
       serialNumber,
       color: typeof bike.color === 'string' && bike.color.trim() ? bike.color.trim() : 'Azul',
       size: typeof bike.size === 'string' && bike.size.trim() ? bike.size.trim() : 'Mediana',
-      bikeType: typeof bike.bikeType === 'string' && bike.bikeType.trim() ? bike.bikeType.trim() : 'Urbana',
+      bikeType: normalizeBikeType(
+        typeof bike.bikeType === 'string' && bike.bikeType.trim()
+          ? bike.bikeType.trim()
+          : bike.tipoBicicleta,
+      ),
       battery: clamp(typeof bike.battery === 'number' ? bike.battery : 100, 0, 100),
-      status:
-        bike.status === 'available' ||
-        bike.status === 'in_use' ||
-        bike.status === 'maintenance' ||
-        bike.status === 'low_battery'
-          ? bike.status
-          : 'available',
+      status: normalizeBikeStatus(bike.status ?? bike.estado),
       stationId: typeof bike.stationId === 'string' && bike.stationId.trim() ? bike.stationId : null,
       lat: clamp(typeof bike.lat === 'number' ? bike.lat : DEFAULT_CENTER[0], -90, 90),
       lng: clamp(typeof bike.lng === 'number' ? bike.lng : DEFAULT_CENTER[1], -180, 180),
@@ -148,19 +354,161 @@ export function normalizeStations(rawStations: unknown[]) {
   return rawStations.map((rawStation) => {
     const station = rawStation as Partial<Station> & Record<string, unknown>
     const now = getNowIso()
+    const status = normalizeStationStatus(station.status ?? station.estado, station.isActive !== false)
 
     return {
       id: typeof station.id === 'string' && station.id.trim() ? station.id : generateId('station'),
-      name: typeof station.name === 'string' && station.name.trim() ? station.name.trim() : 'Estacion',
+      name: typeof station.name === 'string' && station.name.trim() ? station.name.trim() : 'Puesto',
       zone: typeof station.zone === 'string' ? station.zone.trim() : '',
       capacity: clamp(typeof station.capacity === 'number' ? station.capacity : 10, 1, 500),
       lat: clamp(typeof station.lat === 'number' ? station.lat : DEFAULT_CENTER[0], -90, 90),
       lng: clamp(typeof station.lng === 'number' ? station.lng : DEFAULT_CENTER[1], -180, 180),
-      isActive: station.isActive !== false,
+      status,
+      isActive: status === 'active',
       createdAt: typeof station.createdAt === 'string' && station.createdAt ? station.createdAt : now,
       updatedAt: typeof station.updatedAt === 'string' && station.updatedAt ? station.updatedAt : now,
     } satisfies Station
   })
+}
+
+export function normalizeMaintenance(rawMaintenance: unknown[]) {
+  return rawMaintenance.map((rawItem) => {
+    const item = (rawItem && typeof rawItem === 'object' ? rawItem : {}) as Partial<MaintenanceItem> &
+      Record<string, unknown>
+    const now = getNowIso()
+
+    return {
+      id: getFirstString(item, ['id', '_id', 'maintenanceId', 'maintenance_id']) || generateId('maint'),
+      bikeId: getFirstString(item, ['bikeId', 'bike_id', 'bicicletaId', 'bicicleta_id']) || '',
+      supportTicketId: getFirstString(item, ['supportTicketId', 'support_ticket_id', 'ticketId', 'ticket_id']) || undefined,
+      title: getFirstString(item, ['title', 'titulo', 'subject', 'name']) || 'Mantenimiento',
+      technician: getFirstString(item, ['technician', 'tecnico', 'assignedTechnician', 'assigned_technician']),
+      notes: getFirstString(item, ['notes', 'notas', 'description', 'detail', 'details', 'comment']),
+      status:
+        item.status === 'open' || item.status === 'in_progress' || item.status === 'resolved'
+          ? item.status
+          : 'open',
+      createdAt: normalizeDateValue(
+        readNestedValue(item, 'createdAt') ?? readNestedValue(item, 'created_at'),
+        now,
+      ),
+      updatedAt: normalizeDateValue(
+        readNestedValue(item, 'updatedAt') ?? readNestedValue(item, 'updated_at'),
+        now,
+      ),
+    } satisfies MaintenanceItem
+  })
+}
+
+export function normalizeSupport(rawTickets: unknown[]) {
+  return rawTickets.map((rawTicket) => {
+    const ticket = (rawTicket && typeof rawTicket === 'object' ? rawTicket : {}) as Partial<SupportTicket> &
+      Record<string, unknown>
+    const now = getNowIso()
+
+    return {
+      id: getFirstString(ticket, ['id', '_id', 'ticketId', 'ticket_id']) || generateId('ticket'),
+      subject:
+        getFirstString(ticket, ['subject', 'title', 'issue', 'reason', 'summary']) || 'Ticket de soporte',
+      requester: getFirstString(ticket, [
+        'requester',
+        'requesterName',
+        'requester_name',
+        'name',
+        'email',
+        'user.name',
+        'user.fullName',
+        'user.email',
+        'customer.name',
+        'customer.email',
+      ]),
+      channel: getFirstString(ticket, ['channel', 'source', 'origin', 'contactMethod', 'contact_method']),
+      notes: getFirstString(ticket, ['notes', 'description', 'message', 'detail', 'details', 'body', 'comment']),
+      bikeId: getFirstString(ticket, [
+        'bikeId',
+        'bike_id',
+        'bicicletaId',
+        'bicicleta_id',
+        'bicycleId',
+        'bicycle_id',
+        'vehicleId',
+        'vehicle_id',
+        'bike.id',
+        'bicicleta.id',
+        'bicycle.id',
+      ]) || undefined,
+      bikeCode: getFirstString(ticket, [
+        'bikeCode',
+        'bike_code',
+        'code',
+        'serialNumber',
+        'serial_number',
+        'bike.code',
+        'bike.serialNumber',
+        'bike.serial_number',
+        'bicicleta.codigo',
+        'bicicleta.serialNumber',
+        'bicycle.code',
+        'bicycle.serialNumber',
+      ]) || undefined,
+      type: normalizeSupportTypeValue(readNestedValue(ticket, 'type') ?? readNestedValue(ticket, 'category') ?? readNestedValue(ticket, 'issueType') ?? readNestedValue(ticket, 'ticketType')),
+      status: normalizeSupportStatusValue(readNestedValue(ticket, 'status') ?? readNestedValue(ticket, 'state')),
+      importance: normalizeSupportImportanceValue(
+        readNestedValue(ticket, 'importance') ??
+          readNestedValue(ticket, 'priority') ??
+          readNestedValue(ticket, 'severity') ??
+          readNestedValue(ticket, 'level'),
+      ),
+      createdAt: normalizeDateValue(
+        readNestedValue(ticket, 'createdAt') ??
+          readNestedValue(ticket, 'created_at') ??
+          readNestedValue(ticket, 'openedAt') ??
+          readNestedValue(ticket, 'opened_at'),
+        now,
+      ),
+      updatedAt: normalizeDateValue(
+        readNestedValue(ticket, 'updatedAt') ??
+          readNestedValue(ticket, 'updated_at') ??
+          readNestedValue(ticket, 'closedAt') ??
+          readNestedValue(ticket, 'closed_at'),
+        now,
+      ),
+    } satisfies SupportTicket
+  })
+}
+
+export function extractSupportTickets(payload: unknown): unknown[] | null {
+  if (Array.isArray(payload)) {
+    return payload
+  }
+
+  if (!payload || typeof payload !== 'object') {
+    return null
+  }
+
+  const searchQueue: unknown[] = [
+    (payload as Record<string, unknown>).tickets,
+    (payload as Record<string, unknown>).support,
+    (payload as Record<string, unknown>).items,
+    (payload as Record<string, unknown>).results,
+    (payload as Record<string, unknown>).data,
+  ]
+
+  while (searchQueue.length > 0) {
+    const current = searchQueue.shift()
+
+    if (Array.isArray(current)) {
+      return current
+    }
+
+    if (current && typeof current === 'object') {
+      const record = current as Record<string, unknown>
+
+      searchQueue.push(record.tickets, record.support, record.items, record.results, record.data)
+    }
+  }
+
+  return null
 }
 
 export function loadAdminData(): AdminData {
@@ -176,12 +524,12 @@ export function loadAdminData(): AdminData {
 
     const parsed = JSON.parse(rawValue) as Partial<AdminData>
 
-    return {
-      stations: Array.isArray(parsed.stations) ? normalizeStations(parsed.stations) : [],
-      bikes: Array.isArray(parsed.bikes) ? normalizeBikes(parsed.bikes) : [],
-      maintenance: Array.isArray(parsed.maintenance) ? parsed.maintenance : [],
-      support: Array.isArray(parsed.support) ? parsed.support : [],
-    }
+      return {
+        stations: Array.isArray(parsed.stations) ? normalizeStations(parsed.stations) : [],
+        bikes: Array.isArray(parsed.bikes) ? normalizeBikes(parsed.bikes) : [],
+        maintenance: Array.isArray(parsed.maintenance) ? normalizeMaintenance(parsed.maintenance) : [],
+        support: Array.isArray(parsed.support) ? normalizeSupport(parsed.support) : [],
+      }
   } catch {
     return createEmptyAdminData()
   }
@@ -222,6 +570,10 @@ export function getBikeStatusLabel(status: BikeStatus) {
   return bikeStatusOptions.find((option) => option.value === status)?.label ?? status
 }
 
+export function getStationStatusLabel(status: StationStatus) {
+  return stationStatusOptions.find((option) => option.value === status)?.label ?? status
+}
+
 export function getMaintenanceStatusLabel(status: MaintenanceStatus) {
   return maintenanceStatusOptions.find((option) => option.value === status)?.label ?? status
 }
@@ -230,11 +582,32 @@ export function getSupportStatusLabel(status: SupportStatus) {
   return supportStatusOptions.find((option) => option.value === status)?.label ?? status
 }
 
+export function getSupportImportanceLabel(importance: SupportImportance) {
+  return supportImportanceOptions.find((option) => option.value === importance)?.label ?? importance
+}
+
+export function getSupportTypeLabel(type: SupportTicketType) {
+  return supportTypeOptions.find((option) => option.value === type)?.label ?? type
+}
+
 export function getBikeTone(status: BikeStatus): MarkerTone {
   if (status === 'available') {
     return 'blue'
   }
   if (status === 'in_use') {
+    return 'green'
+  }
+  if (status === 'maintenance') {
+    return 'orange'
+  }
+  if (status === 'reserved') {
+    return 'blue'
+  }
+  return 'red'
+}
+
+export function getStationTone(status: StationStatus): 'green' | 'orange' | 'red' {
+  if (status === 'active') {
     return 'green'
   }
   if (status === 'maintenance') {
@@ -253,11 +626,21 @@ export function getMaintenanceTone(status: MaintenanceStatus): 'green' | 'orange
   return 'blue'
 }
 
+export function getSupportImportanceTone(importance: SupportImportance): 'blue' | 'orange' | 'red' {
+  if (importance === 'high') {
+    return 'red'
+  }
+  if (importance === 'medium') {
+    return 'orange'
+  }
+  return 'blue'
+}
+
 export function getSupportTone(status: SupportStatus): 'green' | 'orange' | 'blue' {
   if (status === 'resolved') {
     return 'green'
   }
-  if (status === 'in_review') {
+  if (status === 'in_progress') {
     return 'orange'
   }
   return 'blue'
@@ -289,36 +672,6 @@ export function formatRelativeTime(value: string) {
 
 export function getStationOccupancy(stationId: string, bikes: Bike[]) {
   return bikes.filter((bike) => bike.stationId === stationId).length
-}
-
-export function getZoneSummaries(data: AdminData) {
-  const zoneMap = new Map<
-    string,
-    { zone: string; stations: number; bikes: number; capacity: number; occupancy: number }
-  >()
-
-  const activeStations = data.stations.filter((station) => station.isActive)
-  const activeBikes = data.bikes.filter((bike) => bike.isActive)
-
-  activeStations.forEach((station) => {
-    const current = zoneMap.get(station.zone) ?? {
-      zone: station.zone,
-      stations: 0,
-      bikes: 0,
-      capacity: 0,
-      occupancy: 0,
-    }
-
-    const parkedBikes = getStationOccupancy(station.id, activeBikes)
-    current.stations += 1
-    current.bikes += parkedBikes
-    current.capacity += station.capacity
-    current.occupancy = current.capacity === 0 ? 0 : Math.round((current.bikes / current.capacity) * 100)
-
-    zoneMap.set(station.zone, current)
-  })
-
-  return Array.from(zoneMap.values()).sort((left, right) => left.zone.localeCompare(right.zone))
 }
 
 export function buildActivityItems(data: AdminData): ActivityItem[] {

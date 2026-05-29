@@ -31,33 +31,40 @@ function DonutChart({
 }) {
   const radius = 52
   const circumference = 2 * Math.PI * radius
-  let offset = 0
+  const arcSegments = segments.reduce<Array<{ color: string; length: number; offset: number }>>((items, segment) => {
+    const previousOffset = items.at(-1)?.offset ?? 0
+    const previousLength = items.at(-1)?.length ?? 0
+    const offset = previousOffset + previousLength
+    const length = total === 0 ? 0 : (segment.value / total) * circumference
+
+    items.push({
+      color: segment.color,
+      length,
+      offset,
+    })
+
+    return items
+  }, [])
 
   return (
     <div className="analytics-donut">
       <svg viewBox="0 0 140 140" className="analytics-donut__svg" aria-hidden="true">
         <circle cx="70" cy="70" r={radius} className="analytics-donut__track" />
         <g transform="rotate(-90 70 70)">
-          {segments.map((segment, index) => {
-            const segmentLength = total === 0 ? 0 : (segment.value / total) * circumference
-            const circle = (
-              <circle
-                key={`${segment.color}-${index}`}
-                cx="70"
-                cy="70"
-                r={radius}
-                fill="none"
-                stroke={segment.color}
-                strokeWidth="16"
-                strokeLinecap="round"
-                strokeDasharray={`${segmentLength} ${circumference}`}
-                strokeDashoffset={-offset}
-              />
-            )
-
-            offset += segmentLength
-            return circle
-          })}
+          {arcSegments.map((segment, index) => (
+            <circle
+              key={`${segment.color}-${index}`}
+              cx="70"
+              cy="70"
+              r={radius}
+              fill="none"
+              stroke={segment.color}
+              strokeWidth="16"
+              strokeLinecap="round"
+              strokeDasharray={`${segment.length} ${circumference}`}
+              strokeDashoffset={-segment.offset}
+            />
+          ))}
         </g>
       </svg>
 
@@ -392,19 +399,6 @@ export function AnalyticsSection({ data }: { data: AdminData }) {
         </article>
       </section>
 
-      <section className="stack-grid">
-        <article className="card detail-card analytics-panel">
-          <div className="card-head">
-            <h2>Rutas mas usadas</h2>
-            <span className="tag tag--blue">GPS</span>
-          </div>
-
-          <EmptyState
-            title="Sin historial de rutas disponible"
-            copy="Esta grafica se activara cuando cada bicicleta guarde trayectos GPS con origen, destino, distancia y frecuencia de uso."
-          />
-        </article>
-      </section>
     </>
   )
 }

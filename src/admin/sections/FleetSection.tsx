@@ -1,8 +1,9 @@
-import { useState } from 'react'
 import type { Dispatch, SetStateAction } from 'react'
+import { useState } from 'react'
 import { SectionHeader } from '../components/common'
 import { FleetMap } from '../components/FleetMap'
-import type { AdminData } from '../types'
+import type { AdminData, LatLngPoint } from '../types'
+import { ZACAPA_BOUNDARY } from '../zacapaBoundary'
 import {
   formatRelativeTime,
   getBikeLabel,
@@ -11,9 +12,27 @@ import {
   getStationOccupancy,
 } from '../utils'
 
+function isPointInsidePolygon(point: LatLngPoint, polygon: LatLngPoint[]) {
+  let inside = false
+
+  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+    const [yi, xi] = polygon[i]
+    const [yj, xj] = polygon[j]
+    const intersects =
+      yi > point[0] !== yj > point[0] &&
+      point[1] < ((xj - xi) * (point[0] - yi)) / ((yj - yi) || Number.EPSILON) + xi
+
+    if (intersects) {
+      inside = !inside
+    }
+  }
+
+  return inside
+}
+
 export function FleetSection({
   data,
-  setData: _setData,
+  setData,
 }: {
   data: AdminData
   setData: Dispatch<SetStateAction<AdminData>>
@@ -60,7 +79,25 @@ export function FleetSection({
   const selectedStationAvailableCount = parkedInSelectedStation.filter((bike) => bike.status === 'available').length
   const selectedStationInUseCount = parkedInSelectedStation.filter((bike) => bike.status === 'in_use').length
   const selectedStationMaintenanceCount = parkedInSelectedStation.filter((bike) => bike.status === 'maintenance').length
-  const selectedStationLowBatteryCount = parkedInSelectedStation.filter((bike) => bike.status === 'low_battery').length
+  const selectedStationOutOfServiceCount = parkedInSelectedStation.filter((bike) => bike.status === 'out_of_service').length
+  const outOfPerimeterBikes = activeBikes.filter((bike) => !isPointInsidePolygon([bike.lat, bike.lng], ZACAPA_BOUNDARY))
+  const outOfPerimeterBikeIds = outOfPerimeterBikes.map((bike) => bike.id)
+  const moveBike = (bikeId: string, lat: number, lng: number) => {
+    setData((current) => ({
+      ...current,
+      bikes: current.bikes.map((bike) =>
+        bike.id === bikeId
+          ? {
+              ...bike,
+              stationId: bike.status === 'in_use' ? null : bike.stationId,
+              lat,
+              lng,
+              updatedAt: new Date().toISOString(),
+            }
+          : bike,
+      ),
+    }))
+  }
 
   return (
     <>
@@ -79,6 +116,10 @@ export function FleetSection({
           <span className="summary-card__label">Ocupacion actual</span>
           <strong>{totalCapacity === 0 ? '0%' : `${Math.round((occupiedCapacity / totalCapacity) * 100)}%`}</strong>
         </article>
+        <article className="card summary-card">
+          <span className="summary-card__label">Fuera de Zacapa</span>
+          <strong>{outOfPerimeterBikes.length}</strong>
+        </article>
       </section>
 
       <section className="card detail-card fleet-shell">
@@ -90,6 +131,28 @@ export function FleetSection({
           <span className="tag tag--blue">Mapa real con OpenStreetMap</span>
         </div>
 
+        {outOfPerimeterBikes.length > 0 ? (
+          <div className="fleet-alert-banner" role="alert">
+            <div className="fleet-alert-banner__head">
+              <strong>Alerta de perimetro</strong>
+              <span className="tag tag--red">{outOfPerimeterBikes.length} bicicleta(s)</span>
+            </div>
+            <p>Se detectaron bicicletas fuera del perimetro municipal de Zacapa.</p>
+            <div className="fleet-alert-banner__list">
+              {outOfPerimeterBikes.map((bike) => (
+                <span key={bike.id} className="fleet-alert-chip">
+                  {getBikeLabel(bike)} ({bike.lat.toFixed(4)}, {bike.lng.toFixed(4)})
+                </span>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div className="fleet-boundary-banner">
+            <strong>Perimetro activo</strong>
+            <p>Las bicicletas se monitorean dentro del perimetro municipal de Zacapa.</p>
+          </div>
+        )}
+
         <div className="fleet-workspace">
           <div className="fleet-workspace__map">
             <FleetMap
@@ -97,11 +160,14 @@ export function FleetSection({
               bikes={activeBikes}
               visibleBikeIds={visibleBikeIds}
               draftStationPoint={null}
+              boundaryPoints={ZACAPA_BOUNDARY}
+              alertBikeIds={outOfPerimeterBikeIds}
               selectedStationId={activeStationId}
               selectedBikeId={activeBikeId}
               placementTarget={null}
               onSelectStation={setSelectedStationId}
               onSelectBike={setSelectedBikeId}
+              onMoveBike={moveBike}
               onPlace={() => undefined}
             />
 
@@ -124,7 +190,11 @@ export function FleetSection({
               </span>
               <span>
                 <span className="legend-dot legend-dot--red"></span>
-                Bateria baja
+                Fuera de servicio
+              </span>
+              <span>
+                <span className="legend-line legend-line--red"></span>
+                Perimetro Zacapa
               </span>
             </div>
           </div>
@@ -169,10 +239,6 @@ export function FleetSection({
                         <strong>{selectedStation.name}</strong>
                       </div>
                       <div className="fleet-detail-list__row">
-                        <span>Zona</span>
-                        <strong>{selectedStation.zone}</strong>
-                      </div>
-                      <div className="fleet-detail-list__row">
                         <span>Capacidad</span>
                         <strong>{selectedStation.capacity} espacios</strong>
                       </div>
@@ -210,8 +276,8 @@ export function FleetSection({
                         <strong>{selectedStationMaintenanceCount}</strong>
                       </div>
                       <div className="fleet-status-chip fleet-status-chip--red">
-                        <span>Bateria baja</span>
-                        <strong>{selectedStationLowBatteryCount}</strong>
+                        <span>Fuera de servicio</span>
+                        <strong>{selectedStationOutOfServiceCount}</strong>
                       </div>
                     </div>
 
