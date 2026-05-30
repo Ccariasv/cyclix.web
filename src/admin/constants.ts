@@ -23,8 +23,12 @@ export const adminNav: NavItem<AdminSection>[] = [
   { key: 'dashboard', label: 'Dashboard', icon: 'grid' },
   { key: 'registry', label: 'Registro', icon: 'bike' },
   { key: 'fleet', label: 'Flota', icon: 'map' },
+  { key: 'trips', label: 'Viajes', icon: 'clock' },
+  { key: 'zones', label: 'Zonas', icon: 'pin' },
   { key: 'maintenance', label: 'Mantenimiento', imageSrc: maintenanceTabIcon },
+  { key: 'finance', label: 'Finanzas', icon: 'wallet' },
   { key: 'analytics', label: 'Analitica', icon: 'chart' },
+  { key: 'users', label: 'Usuarios', icon: 'users' },
   { key: 'support', label: 'Soporte', icon: 'support' },
 ]
 

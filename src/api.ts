@@ -3,7 +3,7 @@ import type { BikeStatus, BikeType, StationStatus, SupportImportance, SupportSta
 const API_PATH_PREFIX = '/api/v1'
 
 export function buildApiUrl(path: string) {
-  return path
+  return path.startsWith('/') ? path : `/${path}`
 }
 
 export function buildAuthHeaders(token: string) {
@@ -29,6 +29,62 @@ export function buildSupportTicketStatusEndpoint(id: string) {
 
 export function buildSupportTicketPriorityEndpoint(id: string) {
   return buildApiUrl(`${API_PATH_PREFIX}/admin/support/tickets/${encodeURIComponent(id)}/priority`)
+}
+
+export function buildAdminTripsEndpoint() {
+  return buildApiUrl(`${API_PATH_PREFIX}/admin/trips`)
+}
+
+export function buildAdminTripEndpoint(id: string) {
+  return buildApiUrl(`${API_PATH_PREFIX}/admin/trips/${encodeURIComponent(id)}`)
+}
+
+export function buildAdminTripCancelEndpoint(id: string) {
+  return buildApiUrl(`${API_PATH_PREFIX}/admin/trips/${encodeURIComponent(id)}/cancel`)
+}
+
+export function buildAdminUsersEndpoint() {
+  return buildApiUrl(`${API_PATH_PREFIX}/get/user`)
+}
+
+export function buildAdminUserStatusEndpoint(userId: string) {
+  return buildApiUrl(`${API_PATH_PREFIX}/get/user/${encodeURIComponent(userId)}/status`)
+}
+
+export function buildAdminUserRoleEndpoint(userId: string) {
+  return buildApiUrl(`${API_PATH_PREFIX}/get/user/${encodeURIComponent(userId)}/role`)
+}
+
+export function buildWalletMyEndpoint() {
+  return buildApiUrl(`${API_PATH_PREFIX}/wallet/my`)
+}
+
+export function buildWalletMyTransactionsEndpoint() {
+  return buildApiUrl(`${API_PATH_PREFIX}/wallet/my/transactions`)
+}
+
+export function buildWalletMyTopUpEndpoint() {
+  return buildApiUrl(`${API_PATH_PREFIX}/wallet/my/top-up`)
+}
+
+export function buildAdminWalletTopUpEndpoint() {
+  return buildApiUrl(`${API_PATH_PREFIX}/wallet/top-up`)
+}
+
+export function buildAdminZonesEndpoint() {
+  return buildApiUrl(`${API_PATH_PREFIX}/admin/zones`)
+}
+
+export function buildAdminZoneEndpoint(id: string) {
+  return buildApiUrl(`${API_PATH_PREFIX}/admin/zones/${encodeURIComponent(id)}`)
+}
+
+export function buildAdminZoneStatusEndpoint(id: string) {
+  return buildApiUrl(`${API_PATH_PREFIX}/admin/zones/${encodeURIComponent(id)}/status`)
+}
+
+export function buildZoneValidationEndpoint() {
+  return buildApiUrl(`${API_PATH_PREFIX}/zones/validate`)
 }
 
 export function toApiSupportStatus(status: SupportStatus) {

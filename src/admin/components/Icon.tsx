@@ -45,6 +45,14 @@ export function Icon({ name, className }: { name: IconName; className?: string }
           <path d="M15.5 6.5v13" />
         </svg>
       )
+    case 'wallet':
+      return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+          <path d="M4 7.5A2.5 2.5 0 0 1 6.5 5H18a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H6.5A2.5 2.5 0 0 1 4 16.5z" />
+          <path d="M4 9.5h14.5A1.5 1.5 0 0 1 20 11v2a1.5 1.5 0 0 1-1.5 1.5H4" />
+          <circle cx="16.4" cy="12.5" r="0.9" fill="currentColor" stroke="none" />
+        </svg>
+      )
     case 'chart':
       return (
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -52,6 +60,13 @@ export function Icon({ name, className }: { name: IconName; className?: string }
           <path d="M7 17V10" />
           <path d="M12 17V5.5" />
           <path d="M17 17v-7" />
+        </svg>
+      )
+    case 'pin':
+      return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+          <path d="M12 21s6-5.5 6-11a6 6 0 1 0-12 0c0 5.5 6 11 6 11Z" />
+          <circle cx="12" cy="10" r="2.5" />
         </svg>
       )
     case 'support':

@@ -21,13 +21,13 @@ import {
   clamp,
   generateId,
   getNowIso,
+  getStationTone,
   peekNextBikeSerial,
   reserveNextBikeSerial,
   getBikeLabel,
   getBikeStatusLabel,
   getBikeTone,
   getStationStatusLabel,
-  getStationTone,
   normalizeBikes,
 } from '../utils'
 
@@ -88,11 +88,24 @@ const createAssignBikeForm = (): AssignBikeFormState => ({
   bikeId: '',
 })
 
+const BIKE_QR_SIZE = 360
+
 function getInUseBikeCoordinates(station: Station) {
   return {
     lat: clamp(station.lat + 0.00115, -90, 90),
     lng: clamp(station.lng + 0.00135, -180, 180),
   }
+}
+
+function buildBikeQrUrl(bikeCode: string) {
+  const qrValue = `CYCLIX-BICI-${bikeCode.trim().toUpperCase()}`
+  const params = new URLSearchParams({
+    data: qrValue,
+    size: `${BIKE_QR_SIZE}x${BIKE_QR_SIZE}`,
+    margin: '16',
+  })
+
+  return `https://api.qrserver.com/v1/create-qr-code/?${params.toString()}`
 }
 
 function getApiErrorMessage(payload: unknown): string | null {
@@ -277,6 +290,7 @@ export function RegistrationSection({
   const [editingStationId, setEditingStationId] = useState<string | null>(null)
   const [editingBikeId, setEditingBikeId] = useState<string | null>(null)
   const [assignStationId, setAssignStationId] = useState<string | null>(null)
+  const [qrBikeId, setQrBikeId] = useState<string | null>(null)
   const [openMenuId, setOpenMenuId] = useState<string | null>(null)
   const [stationForm, setStationForm] = useState<StationFormState>(createEmptyStationForm)
   const [bikeForm, setBikeForm] = useState<BikeFormState>(() => createBikeForm(operationalStationId))
@@ -293,6 +307,9 @@ export function RegistrationSection({
   const assignableBikes = (assignableBikesSource ?? activeBikes)
     .filter((bike) => bike.stationId !== assignStationId)
     .sort((left, right) => getBikeLabel(left).localeCompare(getBikeLabel(right)))
+  const qrBike = qrBikeId ? data.bikes.find((bike) => bike.id === qrBikeId) ?? null : null
+  const qrBikeLabel = qrBike ? getBikeLabel(qrBike) : ''
+  const qrBikeUrl = qrBike ? buildBikeQrUrl(qrBikeLabel) : ''
 
   useEffect(() => {
     if (!showAssignBikeModal) {
@@ -361,6 +378,10 @@ export function RegistrationSection({
     resetAssignBikeForm()
   }
 
+  const closeQrModal = () => {
+    setQrBikeId(null)
+  }
+
   const openCreateStationModal = () => {
     resetStationForm()
     setShowStationModal(true)
@@ -403,6 +424,10 @@ export function RegistrationSection({
       notes: bike.notes,
     })
     setShowBikeModal(true)
+  }
+
+  const openBikeQrModal = (bikeId: string) => {
+    setQrBikeId(bikeId)
   }
 
   const saveStation = async () => {
@@ -846,7 +871,7 @@ export function RegistrationSection({
         ) : sortedBikes.length === 0 ? (
           <EmptyState title="Sin bicicletas" copy="Cuando registres la primera bicicleta, aparecera aqui." />
         ) : (
-          <DataTable
+              <DataTable
             columns={['Serie', 'Tipo', 'Color', 'Puesto', 'Estado', 'Opciones']}
             rowKeys={sortedBikes.map((bike) => bike.id)}
             rows={sortedBikes.map((bike) => [
@@ -857,16 +882,23 @@ export function RegistrationSection({
               <span key={`${bike.id}-status`} className={`tag tag--${getBikeTone(bike.status)}`}>
                 {getBikeStatusLabel(bike.status)}
               </span>,
-              <RegistryTableMenu
-                key={`${bike.id}-actions`}
-                menuId={`bike-${bike.id}`}
-                openMenuId={openMenuId}
-                setOpenMenuId={setOpenMenuId}
-                actions={[
-                  {
-                    label: 'Editar',
-                    onSelect: () => openEditBikeModal(bike),
-                  },
+              <div key={`${bike.id}-actions`} className="registry-table-actions">
+                <button
+                  type="button"
+                  className="registry-table-action-button"
+                  onClick={() => openBikeQrModal(bike.id)}
+                >
+                  Generar QR
+                </button>
+                <RegistryTableMenu
+                  menuId={`bike-${bike.id}`}
+                  openMenuId={openMenuId}
+                  setOpenMenuId={setOpenMenuId}
+                  actions={[
+                    {
+                      label: 'Editar',
+                      onSelect: () => openEditBikeModal(bike),
+                    },
                     {
                       label: 'Fuera de servicio',
                       danger: true,
@@ -874,11 +906,82 @@ export function RegistrationSection({
                       onSelect: () => void markBikeOutOfService(bike.id),
                     },
                   ]}
-                />,
+                />
+              </div>,
             ])}
           />
         )}
       </section>
+
+      {qrBike && (
+        <div className="registry-location-modal" role="dialog" aria-modal="true" aria-labelledby="bike-qr-title">
+          <div className="registry-location-modal__backdrop" onClick={closeQrModal}></div>
+          <div className="registry-location-modal__panel registry-location-modal__panel--narrow">
+            <div className="registry-location-modal__header">
+              <div>
+                <span className="fleet-shell__eyebrow">Codigo QR</span>
+                <h2 id="bike-qr-title">QR de bicicleta</h2>
+                <p>Escanea este codigo para identificar rapido la bicicleta {qrBikeLabel}.</p>
+              </div>
+              <button type="button" className="secondary-button" onClick={closeQrModal}>
+                Cerrar
+              </button>
+            </div>
+
+            <div className="registry-qr-card">
+              <div className="registry-qr-card__preview">
+                <img src={qrBikeUrl} alt={`QR de ${qrBikeLabel}`} />
+              </div>
+
+              <div className="registry-qr-card__details">
+                <div className="fleet-detail-list">
+                  <div className="fleet-detail-list__row">
+                    <span>Codigo</span>
+                    <strong>{qrBikeLabel}</strong>
+                  </div>
+                  <div className="fleet-detail-list__row">
+                    <span>Tipo</span>
+                    <strong>{qrBike.bikeType}</strong>
+                  </div>
+                  <div className="fleet-detail-list__row">
+                    <span>Estado</span>
+                    <strong>{getBikeStatusLabel(qrBike.status)}</strong>
+                  </div>
+                  <div className="fleet-detail-list__row">
+                    <span>Puesto</span>
+                    <strong>{data.stations.find((station) => station.id === qrBike.stationId)?.name ?? 'Sin puesto'}</strong>
+                  </div>
+                  <div className="fleet-detail-list__row">
+                    <span>Ubicacion</span>
+                    <strong>
+                      {qrBike.lat.toFixed(5)}, {qrBike.lng.toFixed(5)}
+                    </strong>
+                  </div>
+                </div>
+
+                <p className="fleet-form-hint">
+                  El QR codifica exactamente el numero de serie de la bicicleta para identificarla rapido desde campo.
+                </p>
+
+                <div className="button-row">
+                  <a
+                    className="primary-button"
+                    href={qrBikeUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    download={`${qrBikeLabel}.png`}
+                  >
+                    Descargar PNG
+                  </a>
+                  <button type="button" className="secondary-button" onClick={closeQrModal}>
+                    Listo
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showStationModal && (
         <div className="registry-location-modal" role="dialog" aria-modal="true" aria-labelledby="station-register-title">
@@ -1225,7 +1328,7 @@ export function RegistrationSection({
                 <FleetMap
                   stations={activeStations}
                   bikes={activeBikes}
-                  visibleBikeIds={[]}
+                  visibleBikeIds={activeBikes.map((bike) => bike.id)}
                   draftStationPoint={
                     hasStationLocation
                       ? [Number(stationForm.lat) || DEFAULT_CENTER[0], Number(stationForm.lng) || DEFAULT_CENTER[1]]

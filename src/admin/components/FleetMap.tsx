@@ -1,11 +1,11 @@
 import { useEffect } from 'react'
-import { MapContainer, Marker, Polygon, Popup, TileLayer, useMap, useMapEvents } from 'react-leaflet'
+import { Circle, MapContainer, Marker, Polygon, Popup, TileLayer, useMap, useMapEvents } from 'react-leaflet'
 import { divIcon, latLngBounds } from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import bikeMapIcon from '../../assets/bike-map-icon.png'
 import stationMapIcon from '../../assets/station-map-icon.png'
 import { DEFAULT_CENTER, DEFAULT_ZOOM } from '../constants'
-import type { Bike, LatLngPoint, MarkerTone, PlacementTarget, Station } from '../types'
+import type { Bike, LatLngPoint, MarkerTone, PlacementTarget, Station, Zone } from '../types'
 import { getBikeLabel, getBikeStatusLabel, getBikeTone } from '../utils'
 
 function createStationIcon(active: boolean) {
@@ -48,22 +48,6 @@ function createDraftStationIcon() {
     iconSize: [132, 48],
     iconAnchor: [66, 24],
   })
-}
-
-function getBikeMarkerPosition(bike: Bike, station: Station | null, index: number, total: number): LatLngPoint {
-  if (!station) {
-    return [bike.lat, bike.lng]
-  }
-
-  if (total <= 1) {
-    return [station.lat, station.lng]
-  }
-
-  const angle = (index / total) * Math.PI * 2
-  const latOffset = Math.sin(angle) * 0.00028
-  const lngOffset = Math.cos(angle) * 0.00028
-
-  return [station.lat + latOffset, station.lng + lngOffset]
 }
 
 function MapViewportSync({ points }: { points: LatLngPoint[] }) {
@@ -109,6 +93,7 @@ function MapClickHandler({
 type FleetMapProps = {
   stations: Station[]
   bikes: Bike[]
+  zones?: Zone[]
   visibleBikeIds: string[]
   draftStationPoint: LatLngPoint | null
   boundaryPoints?: LatLngPoint[]
@@ -125,6 +110,7 @@ type FleetMapProps = {
 export function FleetMap({
   stations,
   bikes,
+  zones = [],
   visibleBikeIds,
   draftStationPoint,
   boundaryPoints = [],
@@ -139,11 +125,22 @@ export function FleetMap({
 }: FleetMapProps) {
   const visibleBikeIdSet = new Set(visibleBikeIds)
   const alertBikeIdSet = new Set(alertBikeIds)
-  const visibleBikes = bikes.filter(
-    (bike) => visibleBikeIdSet.has(bike.id) && (bike.stationId === null || bike.status === 'in_use'),
-  )
+  const visibleBikes = bikes.filter((bike) => visibleBikeIdSet.has(bike.id))
+  const zoneBounds: LatLngPoint[] = zones.flatMap((zone) => {
+    const latDelta = zone.radiusMeters / 111320
+    const longitudeMeters = Math.max(Math.cos((zone.centerLatitude * Math.PI) / 180) * 111320, 1)
+    const lngDelta = zone.radiusMeters / Math.abs(longitudeMeters)
+
+    return [
+      [zone.centerLatitude + latDelta, zone.centerLongitude],
+      [zone.centerLatitude - latDelta, zone.centerLongitude],
+      [zone.centerLatitude, zone.centerLongitude + lngDelta],
+      [zone.centerLatitude, zone.centerLongitude - lngDelta],
+    ]
+  })
   const points: LatLngPoint[] = [
     ...boundaryPoints,
+    ...zoneBounds,
     ...stations.map((station) => [station.lat, station.lng] as LatLngPoint),
     ...visibleBikes.map((bike) => [bike.lat, bike.lng] as LatLngPoint),
   ]
@@ -172,6 +169,28 @@ export function FleetMap({
             }}
           />
         ) : null}
+
+        {zones.map((zone) => (
+          <Circle
+            key={`fleet-zone-${zone.id}`}
+            center={[zone.centerLatitude, zone.centerLongitude]}
+            radius={zone.radiusMeters}
+            pathOptions={{
+              color: zone.active ? '#2a7bda' : '#98a8bd',
+              weight: 2,
+              opacity: zone.active ? 0.9 : 0.6,
+              fillColor: zone.active ? '#2a7bda' : '#cad5e1',
+              fillOpacity: zone.active ? 0.09 : 0.05,
+              dashArray: zone.active ? undefined : '8 8',
+            }}
+          >
+            <Popup>
+              <strong>{zone.name}</strong>
+              <div>{zone.active ? 'Zona activa' : 'Zona inactiva'}</div>
+              <div>Radio: {Math.round(zone.radiusMeters)} m</div>
+            </Popup>
+          </Circle>
+        ))}
 
         {stations.map((station) => {
           const parkedBikes = bikes.filter((bike) => bike.stationId === station.id && bike.status !== 'in_use')
@@ -225,14 +244,11 @@ export function FleetMap({
 
         {visibleBikes.map((bike) => {
           const station = stations.find((item) => item.id === bike.stationId) ?? null
-          const parkedBikes = station ? bikes.filter((item) => item.stationId === station.id) : []
-          const parkedIndex = parkedBikes.findIndex((item) => item.id === bike.id)
-          const position = getBikeMarkerPosition(bike, station, parkedIndex, parkedBikes.length)
 
           return (
             <Marker
               key={bike.id}
-              position={position}
+              position={[bike.lat, bike.lng]}
               icon={createBikeIcon(getBikeTone(bike.status), selectedBikeId === bike.id, alertBikeIdSet.has(bike.id))}
               draggable={bike.status === 'in_use'}
               eventHandlers={{
@@ -250,7 +266,7 @@ export function FleetMap({
               <Popup>
                 <strong>{getBikeLabel(bike)}</strong>
                 <div>Estado: {getBikeStatusLabel(bike.status)}</div>
-                {alertBikeIdSet.has(bike.id) ? <div>Alerta: fuera del perimetro de Zacapa</div> : null}
+                {alertBikeIdSet.has(bike.id) ? <div>Alerta: fuera de las zonas activas</div> : null}
                 <div>Bateria: {bike.battery}%</div>
                 <div>
                   Estacion: {station ? station.name : 'Sin estacion'}
