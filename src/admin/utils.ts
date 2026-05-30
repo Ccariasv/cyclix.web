@@ -311,7 +311,31 @@ export function normalizeBikes(rawBikes: unknown[]) {
         ? bike.serialNumber.trim().toUpperCase()
         : typeof bike.code === 'string' && bike.code.trim()
           ? bike.code.trim().toUpperCase()
+          : typeof bike.codigo === 'string' && bike.codigo.trim()
+            ? bike.codigo.trim().toUpperCase()
           : ''
+    const bikeLat =
+      typeof bike.lat === 'number'
+        ? bike.lat
+        : typeof bike.latitud === 'number'
+          ? bike.latitud
+          : typeof readNestedValue(bike, 'puesto.latitud') === 'number'
+            ? (readNestedValue(bike, 'puesto.latitud') as number)
+            : DEFAULT_CENTER[0]
+    const bikeLng =
+      typeof bike.lng === 'number'
+        ? bike.lng
+        : typeof bike.longitud === 'number'
+          ? bike.longitud
+          : typeof readNestedValue(bike, 'puesto.longitud') === 'number'
+            ? (readNestedValue(bike, 'puesto.longitud') as number)
+            : DEFAULT_CENTER[1]
+    const bikeNotes =
+      typeof bike.notes === 'string' && bike.notes.trim()
+        ? bike.notes.trim()
+        : [typeof bike.marca === 'string' ? bike.marca.trim() : '', typeof bike.modelo === 'string' ? bike.modelo.trim() : '']
+            .filter(Boolean)
+            .join(' ')
 
     let serialNumber = preferredSerial
 
@@ -327,22 +351,39 @@ export function normalizeBikes(rawBikes: unknown[]) {
     usedSerials.add(serialNumber)
 
     return {
-      id: typeof bike.id === 'string' && bike.id.trim() ? bike.id : generateId('bike'),
+      id:
+        typeof bike.id === 'string' && bike.id.trim()
+          ? bike.id
+          : typeof bike.id === 'number' && Number.isFinite(bike.id)
+            ? String(bike.id)
+            : generateId('bike'),
       code: serialNumber,
       serialNumber,
       color: typeof bike.color === 'string' && bike.color.trim() ? bike.color.trim() : 'Azul',
-      size: typeof bike.size === 'string' && bike.size.trim() ? bike.size.trim() : 'Mediana',
+      size:
+        typeof bike.size === 'string' && bike.size.trim()
+          ? bike.size.trim()
+          : typeof bike.tamanoLlanta === 'number' && Number.isFinite(bike.tamanoLlanta)
+            ? `${bike.tamanoLlanta}"`
+            : 'Mediana',
       bikeType: normalizeBikeType(
         typeof bike.bikeType === 'string' && bike.bikeType.trim()
           ? bike.bikeType.trim()
-          : bike.tipoBicicleta,
+          : bike.tipoBicicleta ?? bike.tipo,
       ),
       battery: clamp(typeof bike.battery === 'number' ? bike.battery : 100, 0, 100),
       status: normalizeBikeStatus(bike.status ?? bike.estado),
-      stationId: typeof bike.stationId === 'string' && bike.stationId.trim() ? bike.stationId : null,
-      lat: clamp(typeof bike.lat === 'number' ? bike.lat : DEFAULT_CENTER[0], -90, 90),
-      lng: clamp(typeof bike.lng === 'number' ? bike.lng : DEFAULT_CENTER[1], -180, 180),
-      notes: typeof bike.notes === 'string' ? bike.notes : '',
+      stationId:
+        typeof bike.stationId === 'string' && bike.stationId.trim()
+          ? bike.stationId
+          : typeof bike.stationId === 'number' && Number.isFinite(bike.stationId)
+            ? String(bike.stationId)
+            : getFirstString(bike, ['puesto.id'])
+              ? getFirstString(bike, ['puesto.id'])
+              : null,
+      lat: clamp(bikeLat, -90, 90),
+      lng: clamp(bikeLng, -180, 180),
+      notes: bikeNotes,
       isActive: bike.isActive !== false,
       createdAt: typeof bike.createdAt === 'string' && bike.createdAt ? bike.createdAt : now,
       updatedAt: typeof bike.updatedAt === 'string' && bike.updatedAt ? bike.updatedAt : now,
@@ -357,12 +398,51 @@ export function normalizeStations(rawStations: unknown[]) {
     const status = normalizeStationStatus(station.status ?? station.estado, station.isActive !== false)
 
     return {
-      id: typeof station.id === 'string' && station.id.trim() ? station.id : generateId('station'),
-      name: typeof station.name === 'string' && station.name.trim() ? station.name.trim() : 'Puesto',
-      zone: typeof station.zone === 'string' ? station.zone.trim() : '',
-      capacity: clamp(typeof station.capacity === 'number' ? station.capacity : 10, 1, 500),
-      lat: clamp(typeof station.lat === 'number' ? station.lat : DEFAULT_CENTER[0], -90, 90),
-      lng: clamp(typeof station.lng === 'number' ? station.lng : DEFAULT_CENTER[1], -180, 180),
+      id:
+        typeof station.id === 'string' && station.id.trim()
+          ? station.id
+          : typeof station.id === 'number' && Number.isFinite(station.id)
+            ? String(station.id)
+            : generateId('station'),
+      name:
+        typeof station.name === 'string' && station.name.trim()
+          ? station.name.trim()
+          : typeof station.nombre === 'string' && station.nombre.trim()
+            ? station.nombre.trim()
+            : 'Puesto',
+      zone:
+        typeof station.zone === 'string' && station.zone.trim()
+          ? station.zone.trim()
+          : typeof station.direccion === 'string'
+            ? station.direccion.trim()
+            : '',
+      capacity: clamp(
+        typeof station.capacity === 'number'
+          ? station.capacity
+          : typeof station.capacidadTotal === 'number'
+            ? station.capacidadTotal
+            : 10,
+        1,
+        500,
+      ),
+      lat: clamp(
+        typeof station.lat === 'number'
+          ? station.lat
+          : typeof station.latitud === 'number'
+            ? station.latitud
+            : DEFAULT_CENTER[0],
+        -90,
+        90,
+      ),
+      lng: clamp(
+        typeof station.lng === 'number'
+          ? station.lng
+          : typeof station.longitud === 'number'
+            ? station.longitud
+            : DEFAULT_CENTER[1],
+        -180,
+        180,
+      ),
       status,
       isActive: status === 'active',
       createdAt: typeof station.createdAt === 'string' && station.createdAt ? station.createdAt : now,
@@ -651,6 +731,15 @@ export function formatDateTime(value: string) {
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(new Date(value))
+}
+
+export function formatCurrency(value: number, currency = 'GTQ') {
+  return new Intl.NumberFormat('es-GT', {
+    style: 'currency',
+    currency,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value)
 }
 
 export function formatRelativeTime(value: string) {

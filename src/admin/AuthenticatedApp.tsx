@@ -5,8 +5,12 @@ import { Icon } from './components/Icon'
 import { DashboardSection } from './sections/DashboardSection'
 import { RegistrationSection } from './sections/RegistrationSection'
 import { FleetSection } from './sections/FleetSection'
+import { TripsSection } from './sections/TripsSection'
+import { ZonesSection } from './sections/ZonesSection'
 import { MaintenanceSection } from './sections/MaintenanceSection'
+import { FinanceSection } from './sections/FinanceSection'
 import { AnalyticsSection } from './sections/AnalyticsSection'
+import { UsersSection } from './sections/UsersSection'
 import { SupportSection } from './sections/SupportSection'
 import type {
   AdminData,
@@ -16,9 +20,19 @@ import type {
   SupportStatus,
   SupportSyncState,
 } from './types'
-import { extractSupportTickets, getDisplayName, loadAdminData, loadAdminSection, normalizeSupport } from './utils'
+import {
+  extractSupportTickets,
+  getDisplayName,
+  loadAdminData,
+  loadAdminSection,
+  normalizeBikes,
+  normalizeStations,
+  normalizeSupport,
+} from './utils'
 import {
   buildAuthHeaders,
+  buildBicicletasEndpoint,
+  buildPuestosEndpoint,
   buildJsonAuthHeaders,
   buildSupportTicketPriorityEndpoint,
   buildSupportTicketStatusEndpoint,
@@ -87,6 +101,43 @@ function getRequestErrorMessage(error: unknown): string {
   return message
 }
 
+async function parseResponsePayload(response: Response) {
+  const isJson = response.headers.get('content-type')?.includes('application/json')
+  return isJson ? ((await response.json()) as unknown) : await response.text()
+}
+
+function extractCollection(payload: unknown): unknown[] | null {
+  if (Array.isArray(payload)) {
+    return payload
+  }
+
+  if (!payload || typeof payload !== 'object') {
+    return null
+  }
+
+  const queue: unknown[] = [
+    (payload as Record<string, unknown>).data,
+    (payload as Record<string, unknown>).items,
+    (payload as Record<string, unknown>).results,
+    (payload as Record<string, unknown>).content,
+  ]
+
+  while (queue.length > 0) {
+    const current = queue.shift()
+
+    if (Array.isArray(current)) {
+      return current
+    }
+
+    if (current && typeof current === 'object') {
+      const record = current as Record<string, unknown>
+      queue.push(record.data, record.items, record.results, record.content)
+    }
+  }
+
+  return null
+}
+
 function AdminSectionView({
   authToken,
   section,
@@ -117,15 +168,31 @@ function AdminSectionView({
   }
 
   if (section === 'fleet') {
-    return <FleetSection data={data} setData={setData} />
+    return <FleetSection authToken={authToken} data={data} setData={setData} />
+  }
+
+  if (section === 'trips') {
+    return <TripsSection authToken={authToken} />
+  }
+
+  if (section === 'zones') {
+    return <ZonesSection authToken={authToken} />
   }
 
   if (section === 'maintenance') {
     return <MaintenanceSection data={data} setData={setData} />
   }
 
+  if (section === 'finance') {
+    return <FinanceSection authToken={authToken} />
+  }
+
   if (section === 'analytics') {
     return <AnalyticsSection data={data} />
+  }
+
+  if (section === 'users') {
+    return <UsersSection authToken={authToken} />
   }
 
   return (
@@ -173,6 +240,53 @@ export function AuthenticatedApp({ authToken, userEmail, onLogout }: Authenticat
   useEffect(() => {
     window.localStorage.setItem(SIDEBAR_COLLAPSED_STORAGE_KEY, String(isSidebarCollapsed))
   }, [isSidebarCollapsed])
+
+  useEffect(() => {
+    let isCancelled = false
+
+    const loadCoreAdminData = async () => {
+      try {
+        const [stationsResponse, bikesResponse] = await Promise.all([
+          fetch(buildPuestosEndpoint(), {
+            headers: buildAuthHeaders(authToken),
+          }),
+          fetch(buildBicicletasEndpoint(), {
+            headers: buildAuthHeaders(authToken),
+          }),
+        ])
+
+        const [stationsPayload, bikesPayload] = await Promise.all([
+          parseResponsePayload(stationsResponse),
+          parseResponsePayload(bikesResponse),
+        ])
+
+        if (!stationsResponse.ok || !bikesResponse.ok) {
+          return
+        }
+
+        const rawStations = extractCollection(stationsPayload)
+        const rawBikes = extractCollection(bikesPayload)
+
+        if (!rawStations || !rawBikes || isCancelled) {
+          return
+        }
+
+        setData((current) => ({
+          ...current,
+          stations: normalizeStations(rawStations),
+          bikes: normalizeBikes(rawBikes),
+        }))
+      } catch {
+        // Conserva el fallback local si la API no responde.
+      }
+    }
+
+    void loadCoreAdminData()
+
+    return () => {
+      isCancelled = true
+    }
+  }, [authToken])
 
   const refreshSupportTickets = useCallback(async () => {
     setSupportSyncState((current) => ({

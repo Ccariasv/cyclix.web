@@ -1,6 +1,16 @@
 import type { ReactNode } from 'react'
 
-export type AdminSection = 'dashboard' | 'registry' | 'fleet' | 'maintenance' | 'analytics' | 'support'
+export type AdminSection =
+  | 'dashboard'
+  | 'registry'
+  | 'fleet'
+  | 'trips'
+  | 'zones'
+  | 'maintenance'
+  | 'finance'
+  | 'analytics'
+  | 'users'
+  | 'support'
 export type StationStatus = 'active' | 'inactive' | 'maintenance'
 export type BikeType = 'Urbana' | 'Montana' | 'Electrica'
 export type BikeStatus =
@@ -27,7 +37,9 @@ export type IconName =
   | 'tool'
   | 'grid'
   | 'map'
+  | 'wallet'
   | 'chart'
+  | 'pin'
   | 'support'
   | 'ticket'
   | 'clock'
@@ -104,6 +116,75 @@ export type SupportTicket = {
   importance: SupportImportance
   createdAt: string
   updatedAt: string
+}
+
+export type UserAccount = {
+  id: string
+  firstName: string
+  lastName: string
+  email: string
+  phone: string
+  role: 'ADMIN' | 'USER'
+  status: 'ACTIVE' | 'INACTIVE'
+  emailVerified: boolean
+  lastLoginAt: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export type TripRecord = {
+  id: string
+  userId: string
+  bikeId: string
+  status: 'ACTIVE' | 'COMPLETED' | 'CANCELLED'
+  startLatitude: number | null
+  startLongitude: number | null
+  endLatitude: number | null
+  endLongitude: number | null
+  startedAt: string | null
+  endedAt: string | null
+  distanceKm: number | null
+  durationSeconds: number | null
+  createdAt: string
+  updatedAt: string
+}
+
+export type WalletSummary = {
+  balance: number
+  currency: string
+  availableBalance: number | null
+  updatedAt: string | null
+}
+
+export type WalletTransaction = {
+  id: string
+  type: string
+  amount: number
+  status: string
+  paymentMethod: string
+  description: string
+  reference: string
+  createdAt: string
+}
+
+export type Zone = {
+  id: string
+  name: string
+  description: string
+  centerLatitude: number
+  centerLongitude: number
+  radiusMeters: number
+  active: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+export type ZoneValidationResult = {
+  allowed: boolean
+  zoneId: string | null
+  zoneName: string | null
+  distanceMeters: number | null
+  message: string
 }
 
 export type AdminData = {

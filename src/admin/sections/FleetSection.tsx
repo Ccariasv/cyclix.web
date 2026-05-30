@@ -1,9 +1,9 @@
 import type { Dispatch, SetStateAction } from 'react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { SectionHeader } from '../components/common'
 import { FleetMap } from '../components/FleetMap'
-import type { AdminData, LatLngPoint } from '../types'
-import { ZACAPA_BOUNDARY } from '../zacapaBoundary'
+import type { AdminData, Zone } from '../types'
+import { buildAdminZonesEndpoint, buildAuthHeaders } from '../../api'
 import {
   formatRelativeTime,
   getBikeLabel,
@@ -11,37 +11,80 @@ import {
   getBikeTone,
   getStationOccupancy,
 } from '../utils'
+import { extractCollection, getBooleanValue, getNumberValue, getStringValue, parseResponsePayload } from './apiHelpers'
 
-function isPointInsidePolygon(point: LatLngPoint, polygon: LatLngPoint[]) {
-  let inside = false
+function normalizeZone(rawZone: unknown): Zone {
+  const zone = (rawZone && typeof rawZone === 'object' ? rawZone : {}) as Record<string, unknown>
+  const createdAt = getStringValue(zone, ['createdAt', 'created_at'], new Date().toISOString())
+  const updatedAt = getStringValue(zone, ['updatedAt', 'updated_at', 'modifiedAt'], createdAt)
 
-  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
-    const [yi, xi] = polygon[i]
-    const [yj, xj] = polygon[j]
-    const intersects =
-      yi > point[0] !== yj > point[0] &&
-      point[1] < ((xj - xi) * (point[0] - yi)) / ((yj - yi) || Number.EPSILON) + xi
-
-    if (intersects) {
-      inside = !inside
-    }
+  return {
+    id: getStringValue(zone, ['id', 'zoneId']) || `zone-${Math.random().toString(36).slice(2, 10)}`,
+    name: getStringValue(zone, ['name', 'zoneName']) || 'Zona sin nombre',
+    description: getStringValue(zone, ['description', 'detail', 'details']),
+    centerLatitude: getNumberValue(zone, ['centerLatitude', 'latitude', 'lat'], 0) ?? 0,
+    centerLongitude: getNumberValue(zone, ['centerLongitude', 'longitude', 'lng'], 0) ?? 0,
+    radiusMeters: getNumberValue(zone, ['radiusMeters', 'radius', 'radiusInMeters'], 500) ?? 500,
+    active: getBooleanValue(zone, ['active', 'enabled'], true),
+    createdAt,
+    updatedAt,
   }
-
-  return inside
 }
 
 export function FleetSection({
+  authToken,
   data,
   setData,
 }: {
+  authToken: string
   data: AdminData
   setData: Dispatch<SetStateAction<AdminData>>
 }) {
+  const [zones, setZones] = useState<Zone[]>([])
+  const [zonesError, setZonesError] = useState<string | null>(null)
   const activeStations = data.stations.filter((station) => station.isActive)
   const activeBikes = data.bikes.filter((bike) => bike.isActive)
+  const activeZones = zones.filter((zone) => zone.active)
   const visibleBikeIds = activeBikes.map((bike) => bike.id)
   const [selectedStationId, setSelectedStationId] = useState<string | null>(data.stations[0]?.id ?? null)
   const [selectedBikeId, setSelectedBikeId] = useState<string | null>(data.bikes[0]?.id ?? null)
+
+  useEffect(() => {
+    let isCancelled = false
+
+    const loadZones = async () => {
+      try {
+        const response = await fetch(buildAdminZonesEndpoint(), {
+          headers: buildAuthHeaders(authToken),
+        })
+        const payload = await parseResponsePayload(response)
+
+        if (!response.ok) {
+          throw new Error('No se pudieron cargar las zonas de cobertura para flota.')
+        }
+
+        const rawZones = extractCollection(payload)
+
+        if (!isCancelled) {
+          setZones((rawZones ?? []).map(normalizeZone))
+          setZonesError(null)
+        }
+      } catch (error) {
+        if (!isCancelled) {
+          setZones([])
+          setZonesError(
+            error instanceof Error ? error.message : 'No se pudieron cargar las zonas de cobertura para flota.',
+          )
+        }
+      }
+    }
+
+    void loadZones()
+
+    return () => {
+      isCancelled = true
+    }
+  }, [authToken])
 
   const activeStationId =
     selectedStationId && activeStations.some((station) => station.id === selectedStationId)
@@ -80,7 +123,20 @@ export function FleetSection({
   const selectedStationInUseCount = parkedInSelectedStation.filter((bike) => bike.status === 'in_use').length
   const selectedStationMaintenanceCount = parkedInSelectedStation.filter((bike) => bike.status === 'maintenance').length
   const selectedStationOutOfServiceCount = parkedInSelectedStation.filter((bike) => bike.status === 'out_of_service').length
-  const outOfPerimeterBikes = activeBikes.filter((bike) => !isPointInsidePolygon([bike.lat, bike.lng], ZACAPA_BOUNDARY))
+  const outOfPerimeterBikes =
+    activeZones.length === 0
+      ? []
+      : activeBikes.filter((bike) => {
+          return !activeZones.some((zone) => {
+            const latMeters = (bike.lat - zone.centerLatitude) * 111320
+            const longitudeMeters =
+              (bike.lng - zone.centerLongitude) *
+              Math.max(Math.cos((zone.centerLatitude * Math.PI) / 180) * 111320, 1)
+            const distanceMeters = Math.sqrt(latMeters * latMeters + longitudeMeters * longitudeMeters)
+
+            return distanceMeters <= zone.radiusMeters
+          })
+        })
   const outOfPerimeterBikeIds = outOfPerimeterBikes.map((bike) => bike.id)
   const moveBike = (bikeId: string, lat: number, lng: number) => {
     setData((current) => ({
@@ -117,7 +173,7 @@ export function FleetSection({
           <strong>{totalCapacity === 0 ? '0%' : `${Math.round((occupiedCapacity / totalCapacity) * 100)}%`}</strong>
         </article>
         <article className="card summary-card">
-          <span className="summary-card__label">Fuera de Zacapa</span>
+          <span className="summary-card__label">Fuera de zonas</span>
           <strong>{outOfPerimeterBikes.length}</strong>
         </article>
       </section>
@@ -131,13 +187,23 @@ export function FleetSection({
           <span className="tag tag--blue">Mapa real con OpenStreetMap</span>
         </div>
 
-        {outOfPerimeterBikes.length > 0 ? (
+        {zonesError ? (
+          <div className="fleet-boundary-banner">
+            <strong>Zonas no disponibles</strong>
+            <p>{zonesError}</p>
+          </div>
+        ) : activeZones.length === 0 ? (
+          <div className="fleet-boundary-banner">
+            <strong>Sin zonas activas</strong>
+            <p>Flota no encontro zonas activas desde la API, por eso no se esta evaluando cobertura.</p>
+          </div>
+        ) : outOfPerimeterBikes.length > 0 ? (
           <div className="fleet-alert-banner" role="alert">
             <div className="fleet-alert-banner__head">
-              <strong>Alerta de perimetro</strong>
+              <strong>Alerta de cobertura</strong>
               <span className="tag tag--red">{outOfPerimeterBikes.length} bicicleta(s)</span>
             </div>
-            <p>Se detectaron bicicletas fuera del perimetro municipal de Zacapa.</p>
+            <p>Se detectaron bicicletas fuera de las zonas activas cargadas desde la API.</p>
             <div className="fleet-alert-banner__list">
               {outOfPerimeterBikes.map((bike) => (
                 <span key={bike.id} className="fleet-alert-chip">
@@ -148,8 +214,8 @@ export function FleetSection({
           </div>
         ) : (
           <div className="fleet-boundary-banner">
-            <strong>Perimetro activo</strong>
-            <p>Las bicicletas se monitorean dentro del perimetro municipal de Zacapa.</p>
+            <strong>Zonas activas sincronizadas</strong>
+            <p>Las bicicletas se monitorean contra {activeZones.length} zona(s) activas cargadas desde la API.</p>
           </div>
         )}
 
@@ -158,9 +224,9 @@ export function FleetSection({
             <FleetMap
               stations={activeStations}
               bikes={activeBikes}
+              zones={activeZones}
               visibleBikeIds={visibleBikeIds}
               draftStationPoint={null}
-              boundaryPoints={ZACAPA_BOUNDARY}
               alertBikeIds={outOfPerimeterBikeIds}
               selectedStationId={activeStationId}
               selectedBikeId={activeBikeId}
@@ -193,8 +259,8 @@ export function FleetSection({
                 Fuera de servicio
               </span>
               <span>
-                <span className="legend-line legend-line--red"></span>
-                Perimetro Zacapa
+                <span className="legend-dot legend-dot--blue"></span>
+                Zonas API
               </span>
             </div>
           </div>
